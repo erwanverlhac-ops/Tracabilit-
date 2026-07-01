@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traçabilité Production</title>
+    <style>
+        /* DESIGN ET ERGONOMIE (Spécial Tablette) */
+        :root {
+            --bg-color: #f4f7f6;
+            --text-color: #2c3e50;
+            --card-bg: #ffffff;
+            --primary: #3498db;
+            --roto-color: #9b59b6;
+            --chariot-color: #e67e22;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --border-radius: 12px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            font-size: 18px; /* Grande police pour lisibilité */
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Formulaires et Boutons */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            box-sizing: border-box;
+            background-color: #fff;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:active {
+            opacity: 0.8;
+            transform: scale(0.98);
+        }
+
+        .btn-now { background-color: var(--primary); margin-top: 10px; width: 100%; }
+        .btn-roto { background-color: var(--roto-color); width: 48%; }
+        .btn-chariot { background-color: var(--chariot-color); width: 48%; }
+        .btn-delete { background-color: var(--danger); padding: 15px; font-size: 1rem; }
+        .btn-export { background-color: var(--success); width: 100%; font-size: 1.5rem; padding: 20px; margin-top: 30px; }
+
+        /* Mise en page de l'en-tête */
+        .header-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+        }
+
+        .product-info {
+            grid-column: span 2;
+            text-align: center;
+            padding: 15px;
+            background: #d4e6f1;
+            border-radius: 8px;
+            display: none; /* Masqué par défaut */
+        }
+
+        .product-info.active {
+            display: block;
+        }
+
+        .tolerance-display {
+            font-weight: bold;
+            color: var(--danger);
+            font-size: 1.2rem;
+        }
+
+        /* Section Échelles */
+        .actions-echelles {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .echelle-card {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr 1fr 1.5fr auto;
+            gap: 15px;
+            align-items: center;
+            background: #fff;
+            border: 2px solid #bdc3c7;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+        }
+
+        .echelle-type {
+            font-weight: bold;
+            font-size: 1.3rem;
+            text-align: center;
+        }
+
+        .type-roto { color: var(--roto-color); }
+        .type-chariot { color: var(--chariot-color); }
+
+        /* États de validation pour le poids */
+        .input-valid {
+            background-color: #d5f5e3 !important;
+            border-color: var(--success) !important;
+        }
+        .input-invalid {
+            background-color: #fadbd8 !important;
+            border-color: var(--danger) !important;
+        }
+
+        /* Responsive basique pour écrans plus petits */
+        @media (max-width: 900px) {
+            .echelle-card {
+                grid-template-columns: 1fr 1fr;
+            }
+            .echelle-type {
+                grid-column: span 2;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📝 Consultation & Traçabilité</h1>
+
+    <div class="header-grid">
+        <div class="form-group" style="grid-column: span 2;">
+            <label for="code-produit">Code Produit :</label>
+            <input type="text" id="code-produit" list="liste-produits" placeholder="Saisir ou sélectionner un code..." oninput="this.value = this.value.toUpperCase(); verifierProduit();">
+            <datalist id="liste-produits">
+                </datalist>
+        </div>
+
+        <div id="affichage-produit" class="product-info">
+            <h2 id="nom-produit" style="margin:0 0 10px 0;">-</h2>
+            <p style="margin:5px 0; font-size: 1.2rem;">Poids Théorique : <strong id="poids-theorique">-</strong> g</p>
+            <p style="margin:5px 0;">Marge tolérée : <span id="marge-tolerance" class="tolerance-display">-</span></p>
+        </div>
+
+        <div class="form-group">
+            <label for="date-jour">Date :</label>
+            <input type="date" id="date-jour">
+        </div>
+
+        <div class="form-group">
+            <label for="heure-debut">Heure de début :</label>
+            <input type="time" id="heure-debut">
+            <button class="btn-now" onclick="setHeureMaintenant('heure-debut')">🕒 Maintenant</button>
+        </div>
+    </div>
+
+    <hr style="border:1px solid #bdc3c7; margin: 30px 0;">
+    <h2>Saisie des Échelles</h2>
+    
+    <div class="actions-echelles">
+        <button class="btn-roto" onclick="ajouterEchelle('ROTO')">➕ Ajouter une Échelle Roto</button>
+        <button class="btn-chariot" onclick="ajouterEchelle('CHARIOT')">➕ Ajouter une Échelle Chariot</button>
+    </div>
+
+    <div id="conteneur-echelles">
+        </div>
+
+    <button class="btn-export" onclick="exporterCSV()">💾 Valider et Exporter la Feuille (CSV)</button>
+
+</div>
+
+<script>
+    // 2. BASE DE DONNÉES INTÉGRÉE
+    const baseProduits = [
+        { code: "PRD-001", nom: "Baguette Tradition", poidsTheorique: 150 },
+        { code: "PRD-002", nom: "Pain de Campagne", poidsTheorique: 350 },
+        { code: "PRD-003", nom: "Brioche Tranchée", poidsTheorique: 500 }
+    ];
+
+    // Variables globales pour le contrôle de tolérance
+    let poidsCible = 0;
+    let toleranceActuelle = 0;
+
+    // Initialisation au chargement de la page
+    window.onload = function() {
+        // Pré-remplir la date du jour
+        document.getElementById("date-jour").valueAsDate = new Date();
+        
+        // Alimenter la datalist avec la base de données
+        const dataList = document.getElementById("liste-produits");
+        baseProduits.forEach(prod => {
+            let option = document.createElement("option");
+            option.value = prod.code;
+            dataList.appendChild(option);
+        });
+    };
+
+    // Fonction pour insérer l'heure actuelle dans un champ donné
+    function setHeureMaintenant(elementId) {
+        const maintenant = new Date();
+        const heures = String(maintenant.getHours()).padStart(2, '0');
+        const minutes = String(maintenant.getMinutes()).padStart(2, '0');
+        document.getElementById(elementId).value = `${heures}:${minutes}`;
+    }
+
+    // 3 & 4. LOGIQUE PRODUIT ET MARGE DE TOLÉRANCE
+    function verifierProduit() {
+        const inputCode = document.getElementById("code-produit").value;
+        const produitTrouve = baseProduits.find(p => p.code === inputCode);
+        const affichageDiv = document.getElementById("affichage-produit");
+
+        if (produitTrouve) {
+            // Afficher le bloc produit
+            affichageDiv.classList.add("active");
+            document.getElementById("nom-produit").innerText = produitTrouve.nom;
+            document.getElementById("poids-theorique").innerText = produitTrouve.poidsTheorique;
+            
+            poidsCible = produitTrouve.poidsTheorique;
+
+            // Règle de calcul automatique de la marge
+            if (poidsCible < 200) {
+                toleranceActuelle = 3;
+            } else {
+                toleranceActuelle = 10;
+            }
+
+            document.getElementById("marge-tolerance").innerText = `+/- ${toleranceActuelle} g (De ${poidsCible - toleranceActuelle}g à ${poidsCible + toleranceActuelle}g)`;
+            
+            // Revalider toutes les échelles existantes avec la nouvelle tolérance
+            revaliderToutesEchelles();
+        } else {
+            affichageDiv.classList.remove("active");
+            poidsCible = 0;
+            toleranceActuelle = 0;
+        }
+    }
+
+    // 5. GESTION DYNAMIQUE DES ÉCHELLES
+    function ajouterEchelle(type) {
+        const conteneur = document.getElementById("conteneur-echelles");
+        const identifiant = Date.now(); // ID unique pour la ligne
+
+        const div = document.createElement("div");
+        div.className = "echelle-card";
+        div.id = `echelle-${identifiant}`;
+
+        const typeClass = type === 'ROTO' ? 'type-roto' : 'type-chariot';
+
+        div.innerHTML = `
+            <div class="echelle-type ${typeClass}">${type}</div>
+            
+            <div>
+                <label>Poids réel (g)</label>
+                <input type="number" class="input-poids" placeholder="Ex: 152" oninput="validerPoids(this)">
+            </div>
+            
+            <div>
+                <label>Visa</label>
+                <input type="text" class="input-visa" placeholder="Initiales" oninput="this.value = this.value.toUpperCase()">
+            </div>
+            
+            <div>
+                <label>Nb Grilles</label>
+                <input type="number" class="input-grilles" placeholder="Ex: 12">
+            </div>
+            
+            <div>
+                <label>Heure fin</label>
+                <input type="time" class="input-heure" id="heure-${identifiant}">
+                <button class="btn-now" style="padding: 10px;" onclick="setHeureMaintenant('heure-${identifiant}')">🕒</button>
+            </div>
+            
+            <div>
+                <label>&nbsp;</label>
+                <button class="btn-delete" onclick="supprimerEchelle('echelle-${identifiant}')">🗑️</button>
+            </div>
+        `;
+
+        conteneur.appendChild(div);
+    }
+
+    function supprimerEchelle(id) {
+        document.getElementById(id).remove();
+    }
+
+    // Validation couleur (Rouge/Vert) du poids saisi
+    function validerPoids(inputElement) {
+        if (!poidsCible || inputElement.value === "") {
+            inputElement.classList.remove("input-valid", "input-invalid");
+            return;
+        }
+
+        const poidsSaisi = parseFloat(inputElement.value);
+        const minTolere = poidsCible - toleranceActuelle;
+        const maxTolere = poidsCible + toleranceActuelle;
+
+        if (poidsSaisi >= minTolere && poidsSaisi <= maxTolere) {
+            inputElement.classList.add("input-valid");
+            inputElement.classList.remove("input-invalid");
+        } else {
+            inputElement.classList.add("input-invalid");
+            inputElement.classList.remove("input-valid");
+        }
+    }
+
+    function revaliderToutesEchelles() {
+        const inputsPoids = document.querySelectorAll(".input-poids");
+        inputsPoids.forEach(input => validerPoids(input));
+    }
+
+    // 6. EXPORTATION DES DONNÉES EN CSV (Compatible Excel)
+    function exporterCSV() {
+        // Récupérer les infos de l'en-tête
+        const date = document.getElementById("date-jour").value;
+        const heureDebut = document.getElementById("heure-debut").value;
+        const codeProduit = document.getElementById("code-produit").value;
+        const nomProduit = document.getElementById("nom-produit").innerText;
+        const poidsTheo = document.getElementById("poids-theorique").innerText;
+
+        if (!codeProduit || poidsTheo === "-") {
+            alert("Veuillez sélectionner un produit valide avant d'exporter.");
+            return;
+        }
+
+        // Création du contenu CSV (Séparateur point-virgule)
+        let csvLines = [];
+        
+        // Bloc d'en-tête
+        csvLines.push("=== FEUILLE DE TRAÇABILITÉ ===");
+        csvLines.push(`Date;${date}`);
+        csvLines.push(`Heure de debut;${heureDebut}`);
+        csvLines.push(`Code Produit;${codeProduit}`);
+        csvLines.push(`Nom Produit;${nomProduit}`);
+        csvLines.push(`Poids Theorique (g);${poidsTheo}`);
+        csvLines.push(`Tolerance;+/- ${toleranceActuelle}g`);
+        csvLines.push(""); // Ligne vide
+
+        // En-tête du tableau des échelles
+        csvLines.push("Type d'echelle;Poids reel (g);Statut Poids;Visa;Nombre de grilles;Heure de fin");
+
+        // Récupérer toutes les lignes d'échelles saisies
+        const echelles = document.querySelectorAll(".echelle-card");
+        
+        if (echelles.length === 0) {
+            alert("Veuillez ajouter au moins une échelle avant d'exporter.");
+            return;
+        }
+
+        echelles.forEach(carte => {
+            const type = carte.querySelector(".echelle-type").innerText;
+            const poids = carte.querySelector(".input-poids").value;
+            const visa = carte.querySelector(".input-visa").value;
+            const grilles = carte.querySelector(".input-grilles").value;
+            const heure = carte.querySelector(".input-heure").value;
+            
+            // Calculer le statut pour le rapport Excel
+            let statutPoids = "Vide";
+            if (poids !== "") {
+                const p = parseFloat(poids);
+                statutPoids = (p >= (poidsCible - toleranceActuelle) && p <= (poidsCible + toleranceActuelle)) ? "OK" : "HORS TOLERANCE";
+            }
+
+            csvLines.push(`${type};${poids};${statutPoids};${visa};${grilles};${heure}`);
+        });
+
+        const csvString = csvLines.join("\n");
+        
+        // Ajout du BOM (\uFEFF) pour forcer Excel à lire le fichier en UTF-8 (conservation des accents si besoin)
+        const blob = new Blob(["\uFEFF" + csvString], { type: "text/csv;charset=utf-8;" });
+        
+        // Création du lien de téléchargement invisible
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `tracabilite_${codeProduit}_${date}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+</body>
+</html>
